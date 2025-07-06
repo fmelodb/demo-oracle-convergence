@@ -10,6 +10,9 @@ DROP TABLE IF EXISTS ACCOUNTS;
 DROP TABLE IF EXISTS BRANCHES; 
 
 
+
+
+
 -- create tables
 CREATE TABLE IF NOT EXISTS BRANCHES (
     ID              INTEGER         NOT NULL PRIMARY KEY,
@@ -32,10 +35,16 @@ CREATE TABLE IF NOT EXISTS TRANSACTIONS (
 ); 
 
 
+
+
+
 -- load data
 Load BRANCHES data\BRANCHES.csv 
 Load ACCOUNTS data\ACCOUNTS.csv 
 Load TRANSACTIONS data\TRANSACTIONS.csv
+
+
+
 
 
 -- count
@@ -44,6 +53,9 @@ FROM
     ( SELECT count(*) AS branches     FROM BRANCHES ),
     ( SELECT count(*) AS accounts     FROM ACCOUNTS ),
     ( SELECT count(*) AS transactions FROM TRANSACTIONS );
+
+
+
 
 
 -- top 3 branch per number of accounts
@@ -56,6 +68,9 @@ ORDER BY total_accounts DESC
 FETCH FIRST 3 ROWS ONLY;
 
 
+
+
+
 -- top 3 accounts with more transactions
 SELECT a.name        as customer_name,
        count(*)      as total_transactions       
@@ -66,13 +81,13 @@ ORDER BY total_transactions DESC
 FETCH FIRST 3 ROWS ONLY; 
 
 
--- largest amount per branch
--- top 5 branches
+
+
+
+-- largest amount per branch, top 5 branches
 SELECT branch_name, customer_name, amount
 FROM (
-    SELECT  b.name AS branch_name,
-            a.name AS customer_name,
-            t.amount,
+    SELECT  b.name AS branch_name, a.name AS customer_name, t.amount,
             MAX(t.amount) OVER (PARTITION BY b.id) as max_amount
     FROM ACCOUNTS a, 
          TRANSACTIONS t, 
@@ -80,8 +95,9 @@ FROM (
     WHERE a.id        = t.src_acct_id
       AND a.branch_id = b.id)
 WHERE amount = max_amount
-ORDER BY amount DESC
-FETCH FIRST 5 ROWS ONLY;
+ORDER BY amount DESC FETCH FIRST 5 ROWS ONLY;
+
+
 
 
 
@@ -108,11 +124,19 @@ ALTER TABLE BRANCHES ADD (
     branch_location SDO_GEOMETRY
 );
 
+
+
+
+
 SELECT * FROM BRANCHES FETCH FIRST 5 ROWS ONLY; 
 
 @02_add_location_to_accounts.sql
 
 SELECT * FROM BRANCHES FETCH FIRST 5 ROWS ONLY;
+
+
+
+
 
 -- spatial indexes
 CREATE INDEX ix_accounts
@@ -122,6 +146,10 @@ INDEXTYPE IS MDSYS.SPATIAL_INDEX;
 CREATE INDEX ix_branches
 ON branches (branch_location)
 INDEXTYPE IS MDSYS.SPATIAL_INDEX;
+
+
+
+
 
 ------------------------------
 -- Proximity Query
@@ -139,14 +167,14 @@ WHERE
                           'distance=20 unit=KM') = 'TRUE'; 
 
 
--- Find closest branches to a customer
--- using nearest neighbor first
-SELECT 
-        b.name                       as branch_name, 
+
+
+
+-- Find closest branches to a customer, using nearest neighbor first
+SELECT  b.name                       as branch_name, 
         ROUND(SDO_NN_DISTANCE(1), 2) as distance_km
 FROM 
-      ACCOUNTS a,
-      BRANCHES b
+      ACCOUNTS a, BRANCHES b
 WHERE 
       a.name = 'VERNIE' 
   AND SDO_NN(b.branch_location,
@@ -155,25 +183,26 @@ WHERE
 ORDER BY distance_km;
 
 
--- Show the distance between customers within a transaction
--- Filter by name
+
+
+
+-- Show the distance between customers within a transaction, filter by name
 SELECT src.NAME      as src_name, 
        t.amount      as amount,
        dst.NAME      as dst_name,
-       ROUND(
-        SDO_GEOM.SDO_DISTANCE(src.customer_location, 
-                              dst.customer_location, 
-                              0.005, 
-                              'unit=KM')) AS km_distance
+       ROUND(SDO_GEOM.SDO_DISTANCE(src.customer_location, 
+                                   dst.customer_location, 
+                                   0.005, 'unit=KM')) AS km_distance
 FROM
-    ACCOUNTS src,
-    ACCOUNTS dst,      
-    TRANSACTIONS t
+    ACCOUNTS src, ACCOUNTS dst, TRANSACTIONS t
 WHERE src.id = t.src_acct_id
   and dst.id = t.dst_acct_id
   and src.id != dst.id  
   and src.name = 'VERNIE'
 ORDER BY km_distance DESC; 
+
+
+
 
 
 ------------------------------
@@ -182,19 +211,23 @@ ORDER BY km_distance DESC;
 
 SELECT * FROM ZONES;
 
+
+
+
+
 -- Find branches within a zone
-SELECT 
-        b.name as branch_name,
+SELECT  b.name as branch_name,
         a.name as zone_name, 
         b.STREET
 FROM 
-      ZONES a,
-      BRANCHES b
-WHERE SDO_INSIDE(
-                  b.branch_location, 
-                  a.area
-                ) = 'TRUE';
+      ZONES a, BRANCHES b
+WHERE SDO_INSIDE( b.branch_location, 
+                  a.area ) = 'TRUE';
   
+
+
+
+
 ------------------------------
 -- Utiliy Query
 ------------------------------
@@ -203,6 +236,9 @@ SELECT
       SDO_UTIL.TO_GEOJSON(b.branch_location) as geojson_format      
 FROM BRANCHES b
 FETCH FIRST 5 ROWS ONLY;
+
+
+
 
 
 -- geojson.io zones (polygons)
@@ -217,6 +253,9 @@ SELECT
 FROM ZONES;
 
 
+
+
+
 -- geojson.io branches (points)
 SELECT 
     '{ "type": "FeatureCollection", "features": ' ||
@@ -229,26 +268,25 @@ SELECT
 FROM BRANCHES;
 
 
+
+
+
 -- geojson.io branches (points and polygons)
-SELECT 
-    '{ "type": "FeatureCollection", "features": ' || 
-      JSON_ARRAYAGG( gformat FORMAT JSON RETURNING CLOB)
-      || ' }' AS geojson_format
+SELECT  '{ "type": "FeatureCollection", "features": ' || 
+         JSON_ARRAYAGG( gformat FORMAT JSON RETURNING CLOB) || ' }' AS geojson_format
 FROM (
-  SELECT 
-          '{"type": "Feature", "properties": {' ||
+  SELECT  '{"type": "Feature", "properties": {' ||
           '"zone_name": "' || name || '"}, ' ||
-          '"geometry": ' || SDO_UTIL.TO_GEOJSON(area) ||                              
-        '}' as gformat    
+          '"geometry": ' || SDO_UTIL.TO_GEOJSON(area) || '}' as gformat    
   FROM ZONES
   UNION ALL
-  SELECT 
-          '{"type": "Feature", "properties": {' ||
+  SELECT  '{"type": "Feature", "properties": {' ||
           '"branch_name": "' || name || '"}, ' ||
-          '"geometry": ' || SDO_UTIL.TO_GEOJSON(branch_location) ||                              
-        '}' as gformat    
+          '"geometry": ' || SDO_UTIL.TO_GEOJSON(branch_location) || '}' as gformat    
   FROM BRANCHES b  
 );
+
+
 
 
 
@@ -270,9 +308,16 @@ CREATE JSON RELATIONAL DUALITY VIEW TRANSFERS AS
     }; 
 
 
+
+
+
 SELECT JSON_SERIALIZE(t.data pretty) as json_document
 FROM TRANSFERS t
 FETCH FIRST 1 ROWS ONLY; 
+
+
+
+
 
 SELECT t.txn_id      as "_ID",
        src.id        as SRC_ACCOUNT_ID,
@@ -287,7 +332,10 @@ FROM
     TRANSACTIONS t
 WHERE src.id = t.src_acct_id
   and dst.id = t.dst_acct_id  
-  and t.txn_id = 743; 
+  and t.txn_id = 247; 
+
+
+
 
 
 INSERT INTO TRANSFERS t (data)
@@ -307,9 +355,17 @@ values ('
 
 commit;
 
+
+
+
+
 SELECT JSON_SERIALIZE(t.data pretty) as json_document
 FROM TRANSFERS t
 WHERE t.data."_id" = 10000;
+
+
+
+
 
 SELECT t.txn_id      as "_ID",
        src.id        as SRC_ACCOUNT_ID,
@@ -328,10 +384,16 @@ WHERE src.id = t.src_acct_id
 
 
 
+
+
 INSERT INTO TRANSACTIONS (TXN_ID, SRC_ACCT_ID, DST_ACCT_ID, DESCRIPTION, AMOUNT)
 VALUES (20000, 52, 269, 'giving your money back', 3); 
 
 commit; 
+
+
+
+
 
 SELECT t.txn_id      as "_ID",
        src.id        as SRC_ACCOUNT_ID,
@@ -348,9 +410,16 @@ WHERE src.id = t.src_acct_id
   and dst.id = t.dst_acct_id  
   and t.txn_id = 20000; 
 
+
+
+
+
 SELECT JSON_SERIALIZE(t.data pretty) as json_document
 FROM TRANSFERS t
 WHERE t.data."_id" = 20000; 
+
+
+
 
 
 -- Collection Tables
@@ -367,13 +436,32 @@ VALUES ('{
 
 commit; 
 
+
+
+
+
 SELECT JSON_SERIALIZE(data pretty) AS data FROM exchange_rate; 
+
+
+
+
+
 
 ---
 -- run python soda.py
 ---
 
+
+
+
+
+
 SELECT JSON_SERIALIZE(data pretty) AS data FROM exchange_rate; 
+
+
+
+
+
 
 -- dot notation
 select t.data.source.string() as source_name,
@@ -381,12 +469,19 @@ select t.data.source.string() as source_name,
        t.data.rate.number()   as rate
 from exchange_rate t; 
 
+
+
+
+
 -- filter
 select t.data.source.string() as source_name,
        t.data.target.string() as target_name,
        t.data.rate.number()   as rate
 from exchange_rate t
 where t.data.target.string() = 'MXN';
+
+
+
 
 
 -- SQL/JSON
@@ -402,26 +497,51 @@ ALTER TABLE TRANSACTIONS ADD DESCRIPTION JSON;
 -- visualize
 SELECT * FROM TRANSACTIONS FETCH FIRST 5 ROWS ONLY; 
 
+
+
+
+
 SELECT json_serialize(t.DESCRIPTION pretty) as json_document
 FROM TRANSACTIONS t
 WHERE txn_id = 1;
 
+
+
+
+
+
 -- total transfers per transfer type (dot notation)
-SELECT t.description.type.string() as transfer_type, COUNT(*) AS CNT
+SELECT t.description.type.string() as transfer_type, 
+       COUNT(*) AS CNT
 FROM TRANSACTIONS t
 GROUP BY t.description.type.string()
 ORDER BY 2 DESC; 
 
+
+
+
+
+
 -- total transfers per transfer type (json function)
-SELECT json_value(t.description, '$.type') as transfer_type, COUNT(*) AS CNT
+SELECT json_value(t.description, '$.type') as transfer_type, 
+       COUNT(*) AS CNT
 FROM TRANSACTIONS t
 GROUP BY json_value(t.description, '$.type')
 ORDER BY 2 DESC; 
 
--- create index and filter
-DROP INDEX IF EXISTS IX_TRANSFER_TYPE; 
 
-CREATE INDEX ix_transfer_type on TRANSACTIONS t (t.description.type.string()); 
+
+
+
+-- create index and filter
+DROP INDEX IF EXISTS ix_transfer_type;
+
+CREATE INDEX ix_transfer_type 
+on TRANSACTIONS t (t.description.type.string()); 
+
+
+
+
 
 -- Query with the following conditions:
 -- a) ZULMA`s account
@@ -448,6 +568,9 @@ WHERE src.id = t.src_acct_id
  and src.NAME = 'ZULMA'
 ORDER BY dist_km_between_home_and_transfer_location DESC
 FETCH FIRST 3 ROWS ONLY; 
+
+
+
 
 
 -- Relational + Spatial + JSON
@@ -479,6 +602,7 @@ WITH bank_transactions AS (
 
 
 
+
 --- #####################################################################################################################################################
 --- DEMO 4: TEXT
 --- #####################################################################################################################################################
@@ -497,25 +621,49 @@ SELECT ID, NAME, JOB_TITLE FROM ACCOUNTS FETCH FIRST 10 ROWS ONLY;
 
 CREATE SEARCH INDEX IX_ACCOUNT_JOB ON ACCOUNTS (job_title);
 
+
+
+
+
+
 -- Keyword
 SELECT id, name, job_title
 FROM ACCOUNTS
 WHERE CONTAINS(job_title, 'Veterinarian') > 0; 
+
+
+
+
+
 
 -- Fuzzy
 SELECT id, name, job_title
 FROM ACCOUNTS
 WHERE CONTAINS(job_title, 'fuzzy(Vetrynaryan)') > 0; 
 
+
+
+
+
 -- Wildcard
 SELECT id, name, job_title
 FROM ACCOUNTS
 WHERE CONTAINS(job_title, '%Engineer') > 0; 
 
+
+
+
+
+
 -- Fuzzy and AND
 SELECT id, name, job_title
 FROM ACCOUNTS
 WHERE CONTAINS(job_title, 'fuzzy(Cyvil) AND Engineer') > 0; 
+
+
+
+
+
 
 -- NOT
 SELECT id, name, job_title
@@ -523,17 +671,26 @@ FROM ACCOUNTS
 WHERE CONTAINS(job_title, 'Engineer NOT Civil') > 0; 
 
 
+
+
+
+
 -- FULL TEXT SEARCH WITH JSON
 DROP INDEX IF EXISTS IX_TRANSFER_COMMENT; 
 
-CREATE SEARCH INDEX IX_TRANSFER_COMMENT ON TRANSACTIONS (description) FOR JSON;
+CREATE SEARCH INDEX IX_TRANSFER_COMMENT 
+ON TRANSACTIONS (description) FOR JSON;
 
-SELECT * FROM TRANSFER_MESSAGES; 
+
+
 
 SELECT txn_id, src_acct_id, dst_acct_id, amount, t.description.message.string() as message
 FROM TRANSACTIONS t
 WHERE JSON_TEXTCONTAINS(t.description, '$.message', 'Netflix%'); 
---
+
+
+
+
 
 -- Relational + Spatial + JSON + Text
 SELECT src.id as SRC_ACCOUNT_ID,
@@ -545,15 +702,16 @@ SELECT src.id as SRC_ACCOUNT_ID,
                                    SDO_UTIL.FROM_GEOJSON(t.description.location), 
                                                          0.005, 
                                                          'unit=KM')) AS dist_km_between_home_and_transfer_loc
-FROM
-    ACCOUNTS src,        
-    TRANSACTIONS t
+FROM ACCOUNTS src, TRANSACTIONS t
 WHERE src.id = t.src_acct_id
- AND t.description.type.string() = 'LGEC'
- AND t.amount > 100
+ AND t.description.type.string() = 'LGEC' AND t.amount > 100
  AND JSON_TEXTCONTAINS(t.description, '$.message', 'Bill') 
 ORDER BY amount DESC
 FETCH FIRST 5 ROWS ONLY; 
+
+
+
+
 
 --- #####################################################################################################################################################
 --- DEMO 5: VECTOR
@@ -566,11 +724,17 @@ ALTER TABLE TRANSACTIONS ADD message_vector VECTOR;
 select model_name from user_mining_models;
 
 
+
+
+
 -- Generating embeddings
 SELECT VECTOR_EMBEDDING(
                         all_MiniLM_L12                           -- embedding model
                         USING 'the book is on the table' AS DATA -- text to be embedded
                       ) AS embedding;
+
+
+
 
 
 -- Update accounts and transactions with vector embeddings
@@ -585,6 +749,9 @@ SET message_vector = VECTOR_EMBEDDING(all_MiniLM_L12
 
 commit;
 
+SELECT job_vector FROM accounts WHERE name = 'VERNIE';
+
+
 
 -- In-Memory Neighbor Graph Vector Index (HNSW)
 DROP INDEX IF EXISTS idx_account_vector_hnsw;
@@ -593,6 +760,9 @@ CREATE VECTOR INDEX idx_account_vector_hnsw
 ON accounts (job_vector)
 ORGANIZATION INMEMORY NEIGHBOR GRAPH
 DISTANCE COSINE WITH TARGET ACCURACY 95;
+
+
+
 
 
 -- Neighbor Partition Vector Index (IVF)
@@ -611,17 +781,25 @@ DISTANCE COSINE WITH TARGET ACCURACY 95;
 
 
 
+
+
 -- jobs vector search
 SELECT * FROM jobs;
+
+
+
 
 
 SELECT name, job_title
 FROM accounts 
 ORDER BY VECTOR_DISTANCE(job_vector, 
                          VECTOR_EMBEDDING(all_MiniLM_L12 
-                                      USING 'related to planets' AS DATA)
+                                      USING 'someone related to planets' AS DATA)
                          , COSINE)
 FETCH FIRST 3 ROWS ONLY;
+
+
+
 
 
 SELECT name, job_title
@@ -633,8 +811,11 @@ ORDER BY VECTOR_DISTANCE(job_vector,
 FETCH FIRST 3 ROWS ONLY;
 
 
+
+
+
 SELECT name, job_title
-FROM accounts
+FROM accounts 
 ORDER BY VECTOR_DISTANCE(job_vector, 
                          VECTOR_EMBEDDING(all_MiniLM_L12 
                                       USING 'he or she works with money' AS DATA),
@@ -642,8 +823,15 @@ ORDER BY VECTOR_DISTANCE(job_vector,
 FETCH FIRST 3 ROWS ONLY;
 
 
+
+
+
 -- messages vector search
 SELECT * FROM transfer_messages;
+
+
+
+
 
 SELECT txn_id, t.description.message.string() as message
 FROM transactions t
@@ -653,13 +841,20 @@ ORDER BY VECTOR_DISTANCE(message_vector,
                          COSINE)
 FETCH FIRST 3 ROWS ONLY;
 
+
+
+
+
 SELECT txn_id, t.description.message.string() as message
-FROM transactions t
+FROM transactions t 
 ORDER BY VECTOR_DISTANCE(message_vector, 
                          VECTOR_EMBEDDING(all_MiniLM_L12 
                                       USING 'message about sports' AS DATA),
                          COSINE)
 FETCH FIRST 3 ROWS ONLY;
+
+
+
 
 
 -- Relational + Spatial + JSON + Text + Vector
@@ -685,6 +880,7 @@ FETCH FIRST 1 ROWS ONLY;
 
 
 
+
 --- #####################################################################################################################################################
 --- DEMO 6: GRAPH
 --- #####################################################################################################################################################
@@ -704,6 +900,10 @@ CREATE PROPERTY GRAPH transactions_graph
       LABEL transfer PROPERTIES ARE ALL COLUMNS
   ); 
 
+
+
+
+
 -- Return 5 transactions 
 SELECT *
 FROM GRAPH_TABLE( transactions_graph 
@@ -716,6 +916,9 @@ FROM GRAPH_TABLE( transactions_graph
 FETCH FIRST 5 ROWS ONLY;
 
 
+
+
+
 -- Find the top 5 accounts in the middle of a 2-hop chain of transfers
 SELECT customer_name, count(*) as Num_In_Middle
 FROM GRAPH_TABLE( transactions_graph 
@@ -724,6 +927,10 @@ FROM GRAPH_TABLE( transactions_graph
 ) GROUP BY customer_name
 ORDER BY Num_In_Middle desc
 FETCH FIRST 5 ROWS ONLY;
+
+
+
+
 
 -- finds out who person Letisha transferred money to, either directly or indirectly via an intermediary
 SELECT 'LETISHA -> ' || dst_names as path, hops, amounts
@@ -736,6 +943,10 @@ FROM GRAPH_TABLE( transactions_graph
 ) 
 ORDER BY hops, amounts;
 
+
+
+
+
 -- Check if there are any N-hop transfers that start and end at the same account
 SELECT customer_account, COUNT(1) AS number_of_cycle_transfers
 FROM GRAPH_TABLE( transactions_graph
@@ -744,6 +955,9 @@ FROM GRAPH_TABLE( transactions_graph
 ) GROUP BY customer_account 
 ORDER BY number_of_cycle_transfers DESC
 FETCH FIRST 5 ROWS ONLY;
+
+
+
 
 
 -- Check if there are any N-hop transfers that start and end at the same account
@@ -759,8 +973,10 @@ FROM GRAPH_TABLE( transactions_graph
 ) ORDER BY total_amount DESC;
 
 
--- Phone contact
 
+
+
+-- Phone contact
 ALTER TABLE accounts ADD IS_SUSPECT BOOLEAN DEFAULT FALSE;
 
 UPDATE accounts
@@ -768,6 +984,10 @@ SET IS_SUSPECT = TRUE
 WHERE name = 'LETISHA'; 
 
 commit;
+
+
+
+
 
 DROP TABLE IF EXISTS PHONE_CONTACTS;
 
@@ -787,6 +1007,10 @@ VALUES (1, 135, 663),
 
 commit;
 
+
+
+
+
 DROP PROPERTY GRAPH IF EXISTS phone_graph; 
 
 CREATE PROPERTY GRAPH phone_graph
@@ -801,6 +1025,9 @@ CREATE PROPERTY GRAPH phone_graph
   ); 
 
 
+
+
+-- list all contacts of a suspect account
 SELECT src_name || ' -> ' || contact_names as path, hops
 FROM GRAPH_TABLE( phone_graph 
     MATCH (src IS account) (-[c IS has_contact]-> (dst IS account)){1,4} (dst_final)   
@@ -809,6 +1036,8 @@ FROM GRAPH_TABLE( phone_graph
              COUNT(c.acct_id_owner) as hops,           
              LISTAGG(dst.name, ' -> ') as contact_names)
 ) ORDER BY hops;
+
+
 
 
 
@@ -841,6 +1070,8 @@ FETCH FIRST 5 ROWS ONLY;
 
 
 
+
+
 --- #####################################################################################################################################################
 --- DEMO 7: SELECT AI
 --- #####################################################################################################################################################
@@ -870,5 +1101,38 @@ SELECT AI "Cuál de las transacciones de LETISHA tiene mayor valor";
 --SELECT AI narrate "Cuál de las transacciones de LETISHA tiene mayor valor";
 
 
-------------
--- FGAC
+--- #####################################################################################################################################################
+--- DEMO 8: FGAC (VPD)
+--- #####################################################################################################################################################
+
+
+-- Relational
+SELECT * FROM ACCOUNTS WHERE name = 'LETISHA';
+
+
+
+
+
+-- Graph
+SELECT 'LETISHA -> ' || dst_names as path, hops, amounts
+FROM GRAPH_TABLE( transactions_graph 
+    MATCH (src is account) (-[t IS transfer]-> (dst is account)){1,2} (final_dst)
+    WHERE src.name = 'LETISHA' 
+    COLUMNS (LISTAGG(dst.name, ' -> ')  as dst_names,
+             COUNT(t.txn_id)         as hops,
+             JSON_ARRAYAGG(t.amount) as amounts)
+) 
+ORDER BY hops, amounts;
+
+
+
+
+
+-- Vector
+SELECT name, job_title
+FROM accounts where name = 'LETISHA'
+ORDER BY VECTOR_DISTANCE(job_vector, 
+                         VECTOR_EMBEDDING(all_MiniLM_L12 
+                                      USING 'he or she works with money' AS DATA),
+                         COSINE)
+FETCH FIRST 3 ROWS ONLY;

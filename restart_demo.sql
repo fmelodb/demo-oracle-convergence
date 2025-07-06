@@ -9,7 +9,7 @@ col name          format a30
 col customer_name format a30
 col customer_city format a30
 col branch_city   format a30
-col street        format a30
+col street        format a35
 col region        format a8
 col zip           format a10
 col country       format a8
@@ -24,6 +24,15 @@ col message       format a40
 col data          format a80
 col fruit_name    format a15
 col description   format a20
+
+
+DROP PROPERTY GRAPH IF EXISTS phone_graph;
+DROP PROPERTY GRAPH IF EXISTS transactions_graph;  
+DROP TABLE IF EXISTS PHONE_CONTACTS;
+DROP TABLE IF EXISTS TRANSACTIONS; 
+DROP TABLE IF EXISTS ACCOUNTS;
+DROP TABLE IF EXISTS BRANCHES; 
+
 
 --- ##########################################################################################################################
 --- TABLE: SAMPLE_ADDRESSES
