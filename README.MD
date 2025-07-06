@@ -6,7 +6,11 @@ It demonstrates how you can use different data formats with the same dataset wit
 
 ## 🚀 Getting Started
 
-You can quickly get an image of Oracle Database 23ai Free (using Podman):
+You can quickly get an image of Oracle Database 23ai Free (using Podman) or using Autonomous Database (ADB).
+
+<B>If you want to run this demo from ADB</B>, connect to Oracle Cloud (OCI) and provision your database using [this quickstart guide](https://apexapps.oracle.com/pls/apex/dbpm/r/livelabs/view-workshop?wid=928). 
+
+<B>If you want to run this demo from a Podman container</B>, use the following procedure:
 
 - [Oracle Container Registry](https://container-registry.oracle.com)  Go to **Database > free (23ai)**
 
