@@ -28,6 +28,8 @@ For the Vector demo, I am using the all_MiniLM_L12_v2.onnx embedding model for g
 
 <B>SYSTEM</B> user is the admin for Podman database, and <B>ADMIN</B> is the admin for ADB-S database. 
 
+
+
 ### 1. Perform OpenAI credential setup (optional):
 
 This step is optional - only consider this if you want to run SELECT AI demo, and you are running on ADB.
@@ -36,15 +38,21 @@ Run openai_profile_setup_example.sql for creating a credential for OpenAI. You h
 
 SELECT AI is currently not available if you are running this demo from Podman.
 
+
+
 ### 2. Load the ONNX Model for Vector Demo:
 
 Run the script load_onnx_model.sql using SYSTEM (Podman) or ADMIN (ADB-S) for loading the embedding model into the database, to be used for the Vector Demo. Follow the instructions for loading it into podman or ADB-S.
+
+
 
 ### 3. Create the VPD objects:
 
 The last demo is related to FGAC, or VPD. Create the policy function and enable the security rule using SYSTEM (Podman) or ADMIN (ADB-S).
 
 You can do this using 06_add_security.sql script.
+
+
 
 ### 4. Install the Python packages for JSON SODA demo:
 
@@ -56,6 +64,9 @@ pip install dotenv
 ```
 
 Also, create a .env file and fill in the following environment variables using your own values:  DB_USER, DB_PASS, DB_URL
+
+Update lib_dir path on soda.py according to your instant client install dir (it requires you to [download the instant client](https://www.oracle.com/database/technologies/instant-client/downloads.html)).
+
 
 
 ### 5. Run the demo:

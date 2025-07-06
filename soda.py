@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 # connection info
 load_dotenv()
-oracledb.init_oracle_client(lib_dir=r"D:\instantclient_23_8")
+oracledb.init_oracle_client(lib_dir=r"D:\instantclient_23_8") # Adjust the path as needed
 username = os.getenv("DB_USER")
 password = os.getenv("DB_PASS")
 dsn      = os.getenv("DB_URL_PODMAN")
