@@ -32,7 +32,7 @@ For the Vector demo, I am using the all_MiniLM_L12_v2.onnx embedding model for g
 
 This step is optional - only consider this if you want to run SELECT AI demo, and you are running on ADB.
 
-Run openai_profile_setup.sql for creating a credential for OpenAI. You have to provide your own API key.
+Run openai_profile_setup_example.sql for creating a credential for OpenAI. You have to provide your own API key.
 
 SELECT AI is currently not available if you are running this demo from Podman.
 
