@@ -1,6 +1,32 @@
 
+set define off
+set lines 150
+set pages 200
+set long 1000000
+
+col path          format a50
+col name          format a30
+col customer_name format a30
+col customer_city format a30
+col branch_city   format a30
+col street        format a30
+col region        format a8
+col zip           format a10
+col country       format a8
+col city          format a30
+col src_name      format a20
+col dst_name      format a20
+col total_amount  format 99999
+col address       format a70
+col transfer_type format a6
+col job_title     format a30
+col message       format a40
+col data          format a80
+col fruit_name    format a15
+col description   format a20
+
 --- ##########################################################################################################################
---- TABLE: SAMPLE_ADDRESSES table
+--- TABLE: SAMPLE_ADDRESSES
 --- ##########################################################################################################################
 
 -- Reference table for storing Mexico City main COLONIAS (neighborhood)
@@ -27,6 +53,101 @@ SET location = SDO_GEOMETRY(2001, -- Tipo de geometria: 2D Point
                             4326, -- SRID (WGS84)
                             SDO_POINT_TYPE(longitude, latitude, NULL),
                             NULL,NULL);
+
+COMMIT;
+
+
+--- ##########################################################################################################################
+--- TABLE: ZONES
+--- ##########################################################################################################################
+
+DROP TABLE IF EXISTS ZONES;
+
+CREATE TABLE IF NOT EXISTS ZONES (
+  id NUMBER PRIMARY KEY,
+  name VARCHAR2(50),
+  area SDO_GEOMETRY
+);
+
+-- CENTRO
+INSERT INTO ZONES VALUES (
+  1, 'CENTER',
+  SDO_GEOMETRY(
+    2003, 4326, NULL,
+    SDO_ELEM_INFO_ARRAY(1,1003,1),
+    SDO_ORDINATE_ARRAY(
+      -46.68, -23.56,  -- X,Y
+      -46.60, -23.56,
+      -46.60, -23.50,
+      -46.68, -23.50,
+      -46.68, -23.56   -- Fecha o polígono
+    )
+  )
+);
+
+-- ZONA North
+INSERT INTO ZONES VALUES (
+  2, 'NORTH',
+  SDO_GEOMETRY(
+    2003, 4326, NULL,
+    SDO_ELEM_INFO_ARRAY(1,1003,1),
+    SDO_ORDINATE_ARRAY(
+      -46.75, -23.50,
+      -46.60, -23.50,
+      -46.60, -23.40,
+      -46.75, -23.40,
+      -46.75, -23.50
+    )
+  )
+);
+
+-- ZONA South
+INSERT INTO ZONES VALUES (
+  3, 'SOUTH',
+  SDO_GEOMETRY(
+    2003, 4326, NULL,
+    SDO_ELEM_INFO_ARRAY(1,1003,1),
+    SDO_ORDINATE_ARRAY(
+      -46.75, -23.62,
+      -46.60, -23.62,
+      -46.60, -23.56,
+      -46.75, -23.56,
+      -46.75, -23.62
+    )
+  )
+);
+
+-- ZONA East
+INSERT INTO ZONES VALUES (
+  4, 'EAST',
+  SDO_GEOMETRY(
+    2003, 4326, NULL,
+    SDO_ELEM_INFO_ARRAY(1,1003,1),
+    SDO_ORDINATE_ARRAY(
+      -46.60, -23.56,
+      -46.45, -23.56,
+      -46.45, -23.50,
+      -46.60, -23.50,
+      -46.60, -23.56
+    )
+  )
+);
+
+-- ZONA West
+INSERT INTO ZONES VALUES (
+  5, 'WEST',
+  SDO_GEOMETRY(
+    2003, 4326, NULL,
+    SDO_ELEM_INFO_ARRAY(1,1003,1),
+    SDO_ORDINATE_ARRAY(
+      -46.80, -23.56,
+      -46.68, -23.56,
+      -46.68, -23.50,
+      -46.80, -23.50,
+      -46.80, -23.56
+    )
+  )
+);
 
 COMMIT;
 
@@ -232,3 +353,65 @@ VALUES  (1, 'Civil Engineer'),
         (50, 'Economist'); 
 
 commit;
+
+
+--- ##########################################################################################################################
+--- SPATIAL INDEXES
+--- ##########################################################################################################################
+
+DELETE USER_SDO_GEOM_METADATA
+WHERE TABLE_NAME IN ('SAMPLE_ADDRESSES', 'ACCOUNTS', 'BRANCHES', 'ZONES');
+
+INSERT INTO USER_SDO_GEOM_METADATA (TABLE_NAME, COLUMN_NAME, DIMINFO, SRID)
+VALUES (
+  'SAMPLE_ADDRESSES',
+  'LOCATION',
+  SDO_DIM_ARRAY(
+    SDO_DIM_ELEMENT('LONGITUDE', -180, 180, 0.05),
+    SDO_DIM_ELEMENT('LATITUDE', -90, 90, 0.05)
+  ),
+  4326 -- SRID
+);
+
+INSERT INTO USER_SDO_GEOM_METADATA (TABLE_NAME, COLUMN_NAME, DIMINFO, SRID)
+VALUES (
+  'ACCOUNTS',
+  'CUSTOMER_LOCATION',
+  SDO_DIM_ARRAY(
+    SDO_DIM_ELEMENT('LONGITUDE', -180, 180, 0.05),
+    SDO_DIM_ELEMENT('LATITUDE', -90, 90, 0.05)
+  ),
+  4326 -- SRID
+);
+
+INSERT INTO USER_SDO_GEOM_METADATA (TABLE_NAME, COLUMN_NAME, DIMINFO, SRID)
+VALUES (
+  'BRANCHES',
+  'BRANCH_LOCATION',
+  SDO_DIM_ARRAY(
+    SDO_DIM_ELEMENT('LONGITUDE', -180, 180, 0.05),
+    SDO_DIM_ELEMENT('LATITUDE', -90, 90, 0.05)
+  ),
+  4326 -- SRID
+);
+
+INSERT INTO USER_SDO_GEOM_METADATA (TABLE_NAME, COLUMN_NAME, DIMINFO, SRID)
+VALUES (
+  'ZONES',
+  'AREA',
+  SDO_DIM_ARRAY(
+    SDO_DIM_ELEMENT('LONGITUDE', -180, 180, 0.05),
+    SDO_DIM_ELEMENT('LATITUDE', -90, 90, 0.05)
+  ),
+  4326
+);
+
+COMMIT;
+
+CREATE INDEX ix_sample_addresses_location
+ON SAMPLE_ADDRESSES (location)
+INDEXTYPE IS MDSYS.SPATIAL_INDEX;
+
+CREATE INDEX ix_ZONES_area
+ON ZONES (area)
+INDEXTYPE IS MDSYS.SPATIAL_INDEX;

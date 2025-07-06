@@ -1,3 +1,4 @@
 .env
 .venv
-data/sudeste_geo
+data/*.zip
+openai_profile_setup.sql

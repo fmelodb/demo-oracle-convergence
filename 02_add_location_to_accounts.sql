@@ -14,7 +14,7 @@ BEGIN
         INTO v_street, v_city, v_region, v_zip, v_country, v_location
         FROM sample_addresses
         WHERE region in ('SP', 'RJ', 'MG', 'PR')
-        ORDER BY ROUND(dbms_random.value(1,4403))
+        ORDER BY ROUND(dbms_random.value(1,3000))
         FETCH FIRST 1 ROWS ONLY;
 
         UPDATE branches
@@ -33,7 +33,7 @@ BEGIN
         INTO v_street, v_city, v_region, v_zip, v_country, v_location
         FROM sample_addresses
         WHERE region in ('SP', 'RJ', 'MG', 'PR')
-        ORDER BY ROUND(dbms_random.value(1,4403))
+        ORDER BY ROUND(dbms_random.value(1,3000))
         FETCH FIRST 1 ROWS ONLY;
 
         UPDATE accounts

@@ -7,7 +7,7 @@ load_dotenv()
 oracledb.init_oracle_client(lib_dir=r"D:\instantclient_23_8")
 username = os.getenv("DB_USER")
 password = os.getenv("DB_PASS")
-dsn      = os.getenv("DB_URL")
+dsn      = os.getenv("DB_URL_PODMAN")
 
 # insert and query
 with oracledb.connect(user=username, password=password, dsn=dsn)  as connection:
